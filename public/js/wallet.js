@@ -7,18 +7,77 @@ function isMobile() {
   return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "");
 }
 
-function isInsideWalletBrowser() {
-  // MetaMask's own in-app browser sets this flag on window.ethereum.
-  return Boolean(window.ethereum && window.ethereum.isMetaMask);
+// Any wallet app's own in-app browser injects window.ethereum the same way
+// a desktop extension does (EIP-1193) — MetaMask, Trust, Coinbase Wallet,
+// Rainbow, etc. all do this. So if window.ethereum exists, we already
+// support "any wallet" with zero extra code; the gap is only what happens
+// on mobile when NO wallet app's browser is currently hosting the page.
+function isInsideKnownWalletBrowser() {
+  const eth = window.ethereum;
+  if (!eth) return false;
+  return Boolean(eth.isMetaMask || eth.isTrust || eth.isCoinbaseWallet || eth.isRainbow || eth.isRabby);
 }
 
-// On mobile, a plain browser (Chrome/Safari) never has window.ethereum —
-// only a wallet app's own built-in browser does. If we're on mobile with
-// no injected wallet, send the user into MetaMask's in-app browser instead
-// of just failing.
-function openInMetaMaskApp() {
-  const target = `${location.host}${location.pathname}${location.search}`;
-  location.href = `https://metamask.app.link/dapp/${target}`;
+// Deep links that open each wallet app with this exact page loaded inside
+// its own in-app browser. The user does not need to type the URL manually —
+// tapping one of these does it for them, if that app is installed.
+function walletDeepLinks() {
+  const fullUrl = location.href;
+  const hostPath = `${location.host}${location.pathname}${location.search}`;
+  return [
+    { id: "metamask", name: "MetaMask", url: `https://metamask.app.link/dapp/${hostPath}` },
+    { id: "trust", name: "Trust Wallet", url: `https://link.trustwallet.com/open_url?coin_id=60&url=${encodeURIComponent(fullUrl)}` },
+    { id: "coinbase", name: "Coinbase Wallet", url: `https://go.cb-wallet.com/dapp?cb_url=${encodeURIComponent(fullUrl)}` },
+    { id: "rainbow", name: "Rainbow", url: `https://rnbwapp.com/dapp?url=${encodeURIComponent(fullUrl)}` },
+  ];
+}
+
+// Lightweight, dependency-free chooser — no CSS file changes needed.
+// Lets the user pick whichever wallet app they actually have installed,
+// instead of us guessing and hardcoding one.
+function showWalletChooser() {
+  return new Promise((resolve, reject) => {
+    if (document.getElementById("nftcourt-wallet-chooser")) return;
+
+    const overlay = document.createElement("div");
+    overlay.id = "nftcourt-wallet-chooser";
+    overlay.style.cssText =
+      "position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;" +
+      "display:flex;align-items:center;justify-content:center;padding:20px;";
+
+    const panel = document.createElement("div");
+    panel.style.cssText =
+      "background:#fff;border-radius:12px;padding:20px;max-width:340px;width:100%;" +
+      "font-family:inherit;color:#111;";
+    panel.innerHTML = `<p style="margin:0 0 14px;font-weight:600;">Open this page in your wallet app</p>
+      <p style="margin:0 0 14px;font-size:13px;color:#555;">A phone browser can't connect to a wallet directly. Pick the app you have installed — it'll reopen this page inside that app's browser.</p>`;
+
+    walletDeepLinks().forEach(({ name, url }) => {
+      const btn = document.createElement("button");
+      btn.textContent = name;
+      btn.style.cssText =
+        "display:block;width:100%;margin-bottom:8px;padding:10px;border-radius:8px;" +
+        "border:1px solid #ddd;background:#f7f7f7;font-size:14px;cursor:pointer;";
+      btn.addEventListener("click", () => {
+        location.href = url;
+      });
+      panel.appendChild(btn);
+    });
+
+    const cancel = document.createElement("button");
+    cancel.textContent = "Cancel";
+    cancel.style.cssText =
+      "display:block;width:100%;margin-top:6px;padding:10px;border-radius:8px;" +
+      "border:none;background:transparent;color:#888;font-size:13px;cursor:pointer;";
+    cancel.addEventListener("click", () => {
+      overlay.remove();
+      reject(new Error("Wallet connect cancelled."));
+    });
+    panel.appendChild(cancel);
+
+    overlay.appendChild(panel);
+    document.body.appendChild(overlay);
+  });
 }
 
 export function shortAddr(addr) {
@@ -81,13 +140,15 @@ export function disconnectWallet() {
 
 export async function connectWallet() {
   if (!window.ethereum) {
-    if (isMobile() && !isInsideWalletBrowser()) {
-      openInMetaMaskApp();
-      // Navigation away happens above; this only matters if the browser
-      // blocks it (e.g. a popup blocker), so still surface something.
-      throw new Error("Opening MetaMask app… if nothing happens, open this page from inside the MetaMask app's browser.");
+    if (isMobile()) {
+      // No wallet app is hosting this page right now — let the user pick
+      // which one to open it in, instead of assuming MetaMask.
+      await showWalletChooser();
+      // showWalletChooser navigates away on selection; if we're still here,
+      // the user cancelled.
+      throw new Error("Pick a wallet app to continue, or open this page inside your wallet app's browser directly.");
     }
-    throw new Error("Install MetaMask or Rabby to connect.");
+    throw new Error("Install MetaMask, Trust Wallet, Coinbase Wallet, or another browser wallet extension to connect.");
   }
   localStorage.removeItem(DISCONNECTED_KEY);
   await ensureStudioNetwork();
