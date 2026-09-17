@@ -3,6 +3,24 @@ import { NETWORK } from "./config.js";
 const ACCOUNT_KEY = "nftcourt.account";
 const DISCONNECTED_KEY = "nftcourt.disconnected";
 
+function isMobile() {
+  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "");
+}
+
+function isInsideWalletBrowser() {
+  // MetaMask's own in-app browser sets this flag on window.ethereum.
+  return Boolean(window.ethereum && window.ethereum.isMetaMask);
+}
+
+// On mobile, a plain browser (Chrome/Safari) never has window.ethereum —
+// only a wallet app's own built-in browser does. If we're on mobile with
+// no injected wallet, send the user into MetaMask's in-app browser instead
+// of just failing.
+function openInMetaMaskApp() {
+  const target = `${location.host}${location.pathname}${location.search}`;
+  location.href = `https://metamask.app.link/dapp/${target}`;
+}
+
 export function shortAddr(addr) {
   if (!addr) return "";
   return `${addr.slice(0, 6)}\u2026${addr.slice(-4)}`;
@@ -62,7 +80,15 @@ export function disconnectWallet() {
 }
 
 export async function connectWallet() {
-  if (!window.ethereum) throw new Error("Install MetaMask or Rabby to connect.");
+  if (!window.ethereum) {
+    if (isMobile() && !isInsideWalletBrowser()) {
+      openInMetaMaskApp();
+      // Navigation away happens above; this only matters if the browser
+      // blocks it (e.g. a popup blocker), so still surface something.
+      throw new Error("Opening MetaMask app… if nothing happens, open this page from inside the MetaMask app's browser.");
+    }
+    throw new Error("Install MetaMask or Rabby to connect.");
+  }
   localStorage.removeItem(DISCONNECTED_KEY);
   await ensureStudioNetwork();
   const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
