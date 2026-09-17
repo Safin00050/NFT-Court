@@ -1,0 +1,16 @@
+{
+  "hosting": {
+    "public": "public",
+    "cleanUrls": true,
+    "trailingSlash": false,
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "rewrites": [
+      { "source": "/listings", "destination": "/pages/listings.html" },
+      { "source": "/new-listing", "destination": "/pages/new-listing.html" },
+      { "source": "/listing", "destination": "/pages/listing.html" },
+      { "source": "/reputation", "destination": "/pages/reputation.html" },
+      { "source": "/setup", "destination": "/pages/setup.html" },
+      { "source": "/verify", "destination": "/pages/verify.html" }
+    ]
+  }
+}
