@@ -11,13 +11,18 @@ export const NETWORK = {
 
 export const SDK = { genlayerJs: "2.0.0-rc.1" };
 
+// Fixed deployed contract address -- no Setup step needed. This is used
+// whenever nothing else is saved in this browser's local storage, so
+// setContractAddress() below can still override it if you ever redeploy.
+const DEFAULT_CONTRACT_ADDRESS = "0x093EC660AB6518FD26025010dcc911772129dCCC";
+
 const STORAGE_KEY = "nftcourt.contractAddress";
 const ZERO = "0x0000000000000000000000000000000000000000";
 
 export function getContractAddress() {
   const stored = (localStorage.getItem(STORAGE_KEY) || "").trim();
   if (stored && stored !== ZERO) return stored;
-  const baked = (window.NFTCOURT_CONTRACT_ADDRESS || "").trim();
+  const baked = (window.NFTCOURT_CONTRACT_ADDRESS || DEFAULT_CONTRACT_ADDRESS || "").trim();
   if (baked && baked !== ZERO) return baked;
   return "";
 }
