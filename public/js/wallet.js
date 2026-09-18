@@ -189,3 +189,18 @@ export function onAccountsChanged(fn) {
   window.ethereum.on("accountsChanged", fn);
   window.ethereum.on("chainChanged", () => location.reload());
 }
+
+// Best-effort wallet brand detection, used only to pick a color and a name
+// to show next to a generic wallet glyph in the header -- this does NOT
+// reproduce any wallet's actual trademarked logo artwork, just tints an
+// original icon and labels it.
+export function detectWalletBrand() {
+  const eth = window.ethereum;
+  if (!eth) return { name: "Wallet", color: "#5b647a" };
+  if (eth.isMetaMask) return { name: "MetaMask", color: "#f6851b" };
+  if (eth.isCoinbaseWallet) return { name: "Coinbase Wallet", color: "#0052ff" };
+  if (eth.isTrust) return { name: "Trust Wallet", color: "#3375bb" };
+  if (eth.isRainbow) return { name: "Rainbow", color: "#001e59" };
+  if (eth.isRabby) return { name: "Rabby", color: "#7084ff" };
+  return { name: "Wallet", color: "#5b647a" };
+}

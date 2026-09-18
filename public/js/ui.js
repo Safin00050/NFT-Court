@@ -1,5 +1,10 @@
 import { NETWORK, getContractAddress, explorerAddress } from "./config.js";
-import { connectWallet, disconnectWallet, getAccount, shortAddr, switchAccount, onAccountsChanged } from "./wallet.js";
+import { connectWallet, disconnectWallet, getAccount, shortAddr, switchAccount, onAccountsChanged, detectWalletBrand } from "./wallet.js";
+
+// Original, generic wallet glyph (not any brand's actual logo) -- tinted
+// per-provider via currentColor so it visually reflects which wallet is
+// connected without reproducing trademarked artwork.
+const WALLET_ICON_SVG = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="2.5" y="6" width="19" height="13" rx="3" stroke="currentColor" stroke-width="1.6"/><path d="M2.5 9.6h19" stroke="currentColor" stroke-width="1.6"/><circle cx="17.1" cy="13.3" r="1.3" fill="currentColor"/></svg>`;
 
 export function escapeHtml(value) {
   return String(value ?? "")
@@ -50,7 +55,7 @@ export function pageShell(active) {
   return `
   <svg class="wave-top" viewBox="0 0 1440 80" preserveAspectRatio="none" aria-hidden="true"><path d="M0,32 C240,80 480,0 720,32 C960,64 1200,16 1440,40 L1440,0 L0,0 Z"></path></svg>
   <header class="nav">
-    <a class="brand" href="/index.html"><img src="/assets/logo.png" alt="NFT Dispute Court logo">NFT Dispute Court</a>
+    <a class="brand" href="/index.html"><img src="/assets/logo.png" alt="NFT Dispute Court logo"><span class="brand-name">NFT Dispute Court</span></a>
     <nav class="nav-links">
       <a class="${active === "home" ? "active" : ""}" href="/index.html">Home</a>
       <a class="${active === "market" ? "active" : ""}" href="/pages/listings.html">Listings</a>
@@ -60,7 +65,10 @@ export function pageShell(active) {
       <a class="${active === "setup" ? "active" : ""}" href="/pages/setup.html">Setup</a>
     </nav>
     <div class="wallet-box">
-      <button class="btn-primary" id="connectBtn" type="button">Connect wallet</button>
+      <button class="btn-primary" id="connectBtn" type="button">
+        <span class="wallet-icon" id="walletIcon">${WALLET_ICON_SVG}</span>
+        <span class="btn-label" id="connectLabel">Connect wallet</span>
+      </button>
       <button class="btn-ghost" id="switchBtn" type="button" hidden>Switch</button>
       <button class="btn-ghost" id="disconnectBtn" type="button" hidden>Disconnect</button>
     </div>
@@ -85,13 +93,19 @@ export async function wireChrome() {
 
   async function refresh() {
     const account = await getAccount();
+    const label = document.getElementById("connectLabel");
+    const icon = document.getElementById("walletIcon");
+    const brand = detectWalletBrand();
+    if (icon) icon.style.color = brand.color;
     if (account) {
-      connectBtn.textContent = shortAddr(account);
+      if (label) label.textContent = shortAddr(account);
+      connectBtn.title = `Connected via ${brand.name}`;
       connectBtn.className = "btn-ghost";
       switchBtn.hidden = false;
       disconnectBtn.hidden = false;
     } else {
-      connectBtn.textContent = "Connect wallet";
+      if (label) label.textContent = "Connect wallet";
+      connectBtn.removeAttribute("title");
       connectBtn.className = "btn-primary";
       switchBtn.hidden = true;
       disconnectBtn.hidden = true;

@@ -49,6 +49,19 @@ img { max-width: 100%; }
 }
 .brand { display: flex; align-items: center; gap: 10px; color: var(--ink); font-weight: 800; letter-spacing: 0.02em; }
 .brand img { width: 46px; height: 46px; border-radius: 50%; box-shadow: 0 0 0 3px #fff, 0 8px 18px rgba(21,27,58,.18); }
+.brand-name {
+  font-weight: 900;
+  background: linear-gradient(90deg, var(--navy), var(--orange), var(--lime), var(--navy));
+  background-size: 300% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: brandShine 6s linear infinite;
+}
+@keyframes brandShine {
+  0% { background-position: 0% center; }
+  100% { background-position: 300% center; }
+}
 .nav-links { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
 .nav-links a { color: var(--muted); font-size: 14px; }
 .nav-links a.active, .nav-links a:hover { color: var(--navy); }
@@ -61,6 +74,9 @@ img { max-width: 100%; }
   cursor: pointer;
   font-weight: 700;
 }
+#connectBtn { display: inline-flex; align-items: center; gap: 8px; }
+.wallet-icon { display: inline-flex; }
+.wallet-icon svg { display: block; }
 .btn-primary, button.btn-primary {
   background: linear-gradient(135deg, var(--orange), #ffb347);
   color: #1b1408;
